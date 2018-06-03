@@ -67,6 +67,11 @@ Clone(string parentPath, GitUrl url)
     Guard.NotNull(url, nameof(url));
 
     var directoryName = IOPath.GetFileName(url.AbsolutePath);
+    if (directoryName.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+    {
+        directoryName = directoryName.Substring(0, directoryName.Length - 4);
+    }
+
     var path = IOPath.Combine(parentPath, directoryName);
 
     var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", parentPath, "clone", url);
