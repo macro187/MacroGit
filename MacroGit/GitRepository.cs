@@ -501,6 +501,30 @@ Checkout(GitCommitName commit)
 }
 
 
+/// <summary>
+/// Determine whether a file or directory within the repository is .gitignore'd
+/// </summary>
+///
+public bool
+IsIgnored(string path)
+{
+    Guard.NotNull(path, nameof(path));
+    Guard.NotWhiteSpaceOnly(path, nameof(path));
+
+    var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "check-ignore", "-q", path);
+
+    switch(r.ExitCode)
+    {
+        case 0:
+            return true;
+        case 1:
+            return false;
+        default:
+            throw new GitException("check-ignore failed", r);
+    }
+}
+
+
 static string CleanGitBranchLine(string gitBranchLine)
 {
     var s = gitBranchLine;
