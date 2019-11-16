@@ -1,11 +1,11 @@
 ﻿using System;
-using System.IO;
-using IOPath = System.IO.Path;
-using MacroGuards;
-using MacroDiagnostics;
 using System.Collections.Generic;
-using MacroSystem;
+using System.IO;
 using System.Linq;
+using MacroDiagnostics;
+using MacroGuards;
+using MacroSystem;
+using IOPath = System.IO.Path;
 
 namespace
 MacroGit
@@ -115,7 +115,7 @@ Init(string path)
 
     var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", path, "init");
     if (r.ExitCode != 0) throw new GitException("Initialising repository failed", r);
-    
+
     return new GitRepository(path);
 }
 
@@ -513,7 +513,7 @@ IsIgnored(string path)
 
     var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "check-ignore", "-q", path);
 
-    switch(r.ExitCode)
+    switch (r.ExitCode)
     {
         case 0:
             return true;
@@ -525,7 +525,8 @@ IsIgnored(string path)
 }
 
 
-static string CleanGitBranchLine(string gitBranchLine)
+static string
+CleanGitBranchLine(string gitBranchLine)
 {
     var s = gitBranchLine;
     s = s.Trim().TrimStart('*').Trim();

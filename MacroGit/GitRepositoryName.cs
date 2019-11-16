@@ -58,7 +58,7 @@ GitRepositoryName(string repositoryNameString)
     if (!Regex.IsMatch(repositoryNameString, @"^[A-Za-z0-9_.-]+$"))
         throw new FormatException("Contains invalid characters");
 
-     _value = repositoryNameString;
+    _value = repositoryNameString;
 }
 
 
@@ -78,7 +78,7 @@ Equals(GitRepositoryName other)
 
 
 public static bool
-operator==(GitRepositoryName oneName, GitRepositoryName anotherName)
+operator ==(GitRepositoryName oneName, GitRepositoryName anotherName)
 {
     if (object.ReferenceEquals(oneName, null) && object.ReferenceEquals(anotherName, null)) return true;
     if (object.ReferenceEquals(oneName, null) || object.ReferenceEquals(anotherName, null)) return false;
@@ -87,7 +87,7 @@ operator==(GitRepositoryName oneName, GitRepositoryName anotherName)
 
 
 public static bool
-operator!=(GitRepositoryName oneName, GitRepositoryName anotherName)
+operator !=(GitRepositoryName oneName, GitRepositoryName anotherName)
 {
     return !(oneName == anotherName);
 }

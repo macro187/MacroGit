@@ -39,7 +39,7 @@ implicit operator string(GitUrl gitUrl)
 /// </summary>
 ///
 static readonly string[]
-GitSchemes = new [] { "FILE", "SSH", "GIT", "HTTP", "HTTPS" };
+GitSchemes = new[] { "FILE", "SSH", "GIT", "HTTP", "HTTPS" };
 
 
 static string
