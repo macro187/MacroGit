@@ -505,5 +505,29 @@ namespace MacroGit
             }
         }
 
+
+        /// <summary>
+        /// Is one commit the ancestor of another?
+        /// </summary>
+        ///
+        public bool IsAncestor(GitCommitName ancestor, GitCommitName descendent)
+        {
+            Guard.NotNull(ancestor, nameof(ancestor));
+            Guard.NotNull(descendent, nameof(descendent));
+
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                "git", "-C", Path, "merge-base", "--is-ancestor", ancestor, descendent);
+
+            switch (r.ExitCode)
+            {
+                case 0:
+                    return true;
+                case 1:
+                    return false;
+                default:
+                    throw new GitException("merge-base --is-ancestor failed", r);
+            }
+        }
+
     }
 }
