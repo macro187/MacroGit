@@ -155,6 +155,37 @@ namespace MacroGit
 
 
         /// <summary>
+        /// Determine whether the named commit exists in the repository
+        /// </summary>
+        ///
+        public bool Exists(GitCommitName commitName)
+        {
+            return TryGetCommitId(commitName, out var _);
+        }
+
+
+        /// <summary>
+        /// Try resolving a commit name to a unique commit identifier
+        /// </summary>
+        ///
+        public bool TryGetCommitId(GitCommitName commitName, out GitCommitName commitIdentifier)
+        {
+            Guard.NotNull(commitName, nameof(commitName));
+
+            try
+            {
+                commitIdentifier = GetCommitId(commitName);
+                return true;
+            }
+            catch (GitException)
+            {
+                commitIdentifier = default;
+                return false;
+            }
+        }
+
+
+        /// <summary>
         /// Get the globally-unique identifier of the currently-checked-out commit
         /// </summary>
         ///
