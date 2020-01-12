@@ -165,14 +165,15 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Resolves a commit name to an exact unique commit identifier
+        /// Resolve a commit name to a unique commit identifier
         /// </summary>
         ///
         public GitCommitName GetCommitId(GitCommitName commitName)
         {
             Guard.NotNull(commitName, nameof(commitName));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "rev-parse", commitName);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
+                "rev-parse", "-q", "--verify", $"{commitName}^{{commit}}");
 
             if (r.ExitCode != 0)
                 throw new GitException("Get commit ID failed", r);
