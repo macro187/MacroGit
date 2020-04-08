@@ -347,21 +347,33 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Get names of tags
+        /// Get list of remote tags and the commit ids they point to
         /// </summary>
         ///
-        public ISet<GitCommitName> GetTags()
+        public IEnumerable<GitRef> GetRemoteTags()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "tag");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote", "--tags");
 
             if (r.ExitCode != 0)
+                throw new GitException("Get remote tags failed", r);
+
+            return ParseAndDereferenceTagLines(StringExtensions.SplitLines(r.StandardOutput));
+        }
+
+
+        /// <summary>
+        /// Get list of tags and the commit ids they point to
+        /// </summary>
+        ///
+        public IEnumerable<GitRef> GetTags()
+        {
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
+                "show-ref", "--tags", "-d");
+
+            if (r.ExitCode != 0 && r.ExitCode != 1)
                 throw new GitException("Get tags failed", r);
 
-            return new HashSet<GitCommitName>(
-                StringExtensions.SplitLines(r.StandardOutput)
-                    .Select(line => line.Trim())
-                    .Where(line => !string.IsNullOrEmpty(line))
-                    .Select(name => new GitCommitName(name)));
+            return ParseAndDereferenceTagLines(StringExtensions.SplitLines(r.StandardOutput));
         }
 
 
@@ -559,6 +571,40 @@ namespace MacroGit
                 default:
                     throw new GitException("merge-base --is-ancestor failed", r);
             }
+        }
+
+
+        /// <summary>
+        /// Parse tag listings, using special entries ending in "^{}" to dereference annotated tags to the commits
+        /// they point to
+        /// </summary>
+        ///
+        IEnumerable<GitRef> ParseAndDereferenceTagLines(IEnumerable<string> lines)
+        {
+            var entries =
+                lines
+                    // "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8        refs/tags/1.7.0"
+                    .Select(s => s.Trim())
+                    .Where(s => s != "")
+                    // "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8        refs/tags/1.7.0"
+                    .Select(s => s.Split(new[]{' ', '\t'}, 2))
+                    // ["08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8", "       refs/tags/1.7.0"]
+                    .Select(a => (Name: a[1].Trim(), Id: a[0].Trim()))
+                    // ("refs/tags/1.7.0", "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8")
+                    .Select(t => (Name: t.Name.Split('/').Last(), Id: t.Id))
+                    // ("1.7.0", "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8")
+                    .ToList();
+
+            var entriesDictionary = entries.ToDictionary(t => t.Name, t => t.Id);
+
+            string LookupDereferencedId(string name) =>
+                entriesDictionary.TryGetValue($"{name}^{{}}", out var id) ? id : null;
+
+            return
+                entries
+                    .Where(t => !t.Name.EndsWith("^{}"))
+                    .Select(t => (t.Name, Id: LookupDereferencedId(t.Name) ?? t.Id))
+                    .Select(t => new GitRef(new GitCommitName(t.Name), new GitCommitName(t.Id)));
         }
 
     }
