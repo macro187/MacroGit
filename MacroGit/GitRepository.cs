@@ -238,21 +238,39 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Get names of local branches
+        /// Get list of remote branches and the commit ids they point to
         /// </summary>
         ///
-        public ISet<GitCommitName> GetBranches()
+        public IEnumerable<GitRef> GetRemoteBranches()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote", "--heads");
 
-            if (r.ExitCode != 0)
-                throw new GitException("Get branches failed", r);
+            switch (r.ExitCode)
+            {
+                case 0:
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput), false);
+                default:
+                    throw new GitException("Get remote branches failed", r);
+            }
+        }
 
-            return new HashSet<GitCommitName>(
-                StringExtensions.SplitLines(r.StandardOutput)
-                    .Select(line => CleanGitBranchLine(line))
-                    .Where(line => !string.IsNullOrEmpty(line))
-                    .Select(name => new GitCommitName(name)));
+
+        /// <summary>
+        /// Get list of branches and the commit ids they point to
+        /// </summary>
+        ///
+        public IEnumerable<GitRef> GetBranches()
+        {
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "show-ref", "--heads");
+
+            switch (r.ExitCode)
+            {
+                case 0:
+                case 1:
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput), false);
+                default:
+                    throw new GitException("Get branches failed", r);
+            }
         }
 
 
@@ -296,7 +314,7 @@ namespace MacroGit
             Guard.NotNull(target, nameof(target));
 
             // CreateBranch() fails if the branch already exists, so match that behaviour
-            if (GetBranches().Contains(name))
+            if (GetBranches().Select(b => b.Name).Contains(name))
                 throw new GitException("A branch named '" + name + "' already exists");
 
             var symbolicName = new GitCommitName("refs/heads/" + name);
@@ -354,10 +372,13 @@ namespace MacroGit
         {
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote", "--tags");
 
-            if (r.ExitCode != 0)
-                throw new GitException("Get remote tags failed", r);
-
-            return ParseAndDereferenceTagLines(StringExtensions.SplitLines(r.StandardOutput));
+            switch (r.ExitCode)
+            {
+                case 0:
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput), true);
+                default:
+                    throw new GitException("Get remote tags failed", r);
+            }
         }
 
 
@@ -370,10 +391,14 @@ namespace MacroGit
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
                 "show-ref", "--tags", "-d");
 
-            if (r.ExitCode != 0 && r.ExitCode != 1)
-                throw new GitException("Get tags failed", r);
-
-            return ParseAndDereferenceTagLines(StringExtensions.SplitLines(r.StandardOutput));
+            switch (r.ExitCode)
+            {
+                case 0:
+                case 1:
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput), true);
+                default:
+                    throw new GitException("Get tags failed", r);
+            }
         }
 
 
@@ -575,11 +600,14 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Parse tag listings, using special entries ending in "^{}" to dereference annotated tags to the commits
-        /// they point to
+        /// Parse ref listings
         /// </summary>
         ///
-        IEnumerable<GitRef> ParseAndDereferenceTagLines(IEnumerable<string> lines)
+        /// <param name="dereferenceTags">
+        /// Whether to dereference annotated tags to the commits they point to using special entries ending in "^{}"
+        /// </param>
+        ///
+        IEnumerable<GitRef> ParseRefLines(IEnumerable<string> lines, bool dereferenceTags)
         {
             var entries =
                 lines
@@ -591,19 +619,26 @@ namespace MacroGit
                     // ["08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8", "       refs/tags/1.7.0"]
                     .Select(a => (Name: a[1].Trim(), Id: a[0].Trim()))
                     // ("refs/tags/1.7.0", "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8")
-                    .Select(t => (Name: t.Name.Split('/').Last(), Id: t.Id))
+                    .Select(t => (Name: t.Name.Split('/').Last(), Id: t.Id));
                     // ("1.7.0", "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8")
-                    .ToList();
 
-            var entriesDictionary = entries.ToDictionary(t => t.Name, t => t.Id);
+            if (dereferenceTags)
+            {
+                entries = entries.ToList();
 
-            string LookupDereferencedId(string name) =>
-                entriesDictionary.TryGetValue($"{name}^{{}}", out var id) ? id : null;
+                var entriesDictionary = entries.ToDictionary(t => t.Name, t => t.Id);
+
+                string LookupDereferencedId(string name) =>
+                    entriesDictionary.TryGetValue($"{name}^{{}}", out var id) ? id : null;
+
+                entries =
+                    entries
+                        .Where(t => !t.Name.EndsWith("^{}"))
+                        .Select(t => (t.Name, Id: LookupDereferencedId(t.Name) ?? t.Id));
+            }
 
             return
                 entries
-                    .Where(t => !t.Name.EndsWith("^{}"))
-                    .Select(t => (t.Name, Id: LookupDereferencedId(t.Name) ?? t.Id))
                     .Select(t => new GitRef(new GitCommitName(t.Name), new GitCommitName(t.Id)));
         }
 
