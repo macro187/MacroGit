@@ -543,6 +543,58 @@ namespace MacroGit
 
 
         /// <summary>
+        /// Push branches or tags to a remote
+        /// </summary>
+        ///
+        /// <param name="refs">
+        /// Names of branches and/or tags to push
+        /// </param>
+        ///
+        /// <param name="remote">
+        /// Name of remote (default "origin")
+        /// </param>
+        ///
+        /// <param name="dryRun">
+        /// Don't actually do anything, just show what would be done
+        /// </param>
+        ///
+        /// <param name="echoOutput">
+        /// Echo Git command output as it runs
+        /// </param>
+        ///
+        /// <returns>
+        /// Git command output
+        /// </returns>
+        ///
+        public string Push(
+            IEnumerable<GitCommitName> refs,
+            string remote = "origin",
+            bool dryRun = false,
+            bool echoOutput = false)
+        {
+            Guard.NotNull(refs, nameof(refs));
+            Guard.NotNull(remote, nameof(remote));
+            Guard.NotWhiteSpaceOnly(remote, nameof(remote));
+
+            if (!refs.Any()) return "";
+
+            var args = new List<string>(){ "-C", Path, "push", "--atomic" };
+            if (dryRun) args.Add("--dry-run");
+            args.Add(remote);
+            args.AddRange(refs.Select(r => r.ToString()));
+
+            var result = ProcessExtensions.ExecuteCaptured(false, echoOutput, null, "git", args.ToArray());
+
+            if (result.ExitCode != 0)
+            {
+                throw new GitException("Push failed", result);
+            }
+
+            return result.CombinedOutput;
+        }
+
+
+        /// <summary>
         /// Determine whether a file or directory within the repository is .gitignore'd
         /// </summary>
         ///
