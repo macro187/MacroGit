@@ -114,16 +114,6 @@ namespace MacroGit
         }
 
 
-        static string CleanGitBranchLine(string gitBranchLine)
-        {
-            var s = gitBranchLine;
-            s = s.Trim().TrimStart('*').Trim();
-            var i = s.IndexOf("->");
-            if (i >= 0) s = s.Substring(i + 2).Trim();
-            return s;
-        }
-
-
         public GitRepository(string path)
         {
             Guard.Required(path, nameof(path));
