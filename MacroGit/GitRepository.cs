@@ -642,6 +642,50 @@ namespace MacroGit
 
 
         /// <summary>
+        /// Calculate the distance in commits from the beginning of revision history
+        /// </summary>
+        ///
+        /// <param name="to">
+        /// The commit to measure to
+        /// </param>
+        ///
+        public int Distance(GitCommitName to)
+        {
+            return Distance(null, to);
+        }
+
+
+        /// <summary>
+        /// Calculate the distance in commits from one commit to another
+        /// </summary>
+        ///
+        /// <param name="from">
+        /// The commit to measure from, or <c>null</c> to measure from the beginning of history
+        /// </param>
+        ///
+        /// <param name="to">
+        /// The commit to measure to
+        /// </param>
+        ///
+        public int Distance(GitCommitName from, GitCommitName to)
+        {
+            Guard.NotNull(to, nameof(to));
+
+            var path = from != null ? $"{from}..{to}" : to;
+
+            var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
+                "rev-list", "--count", path);
+
+            if (result.ExitCode != 0)
+            {
+                throw new GitException("Calculate distance failed", result);
+            }
+
+            return int.Parse(result.CombinedOutput.Trim());
+        }
+
+
+        /// <summary>
         /// Parse ref listings
         /// </summary>
         ///
