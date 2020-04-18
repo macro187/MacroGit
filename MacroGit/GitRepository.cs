@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using MacroDiagnostics;
@@ -682,6 +683,29 @@ namespace MacroGit
             }
 
             return int.Parse(result.CombinedOutput.Trim());
+        }
+
+
+        /// <summary>
+        /// Get a commit's committer date
+        /// </summary>
+        ///
+        public DateTimeOffset GetCommitterDate(GitCommitName name)
+        {
+            Guard.NotNull(name, nameof(name));
+
+            var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
+                "show", "-s", "--format=%cI", name);
+
+            if (result.ExitCode != 0)
+            {
+                throw new GitException("Git show failed", result);
+            }
+
+            return DateTimeOffset.ParseExact(
+                result.CombinedOutput.Trim(),
+                "yyyy-MM-ddTHH:mm:sszzz",
+                CultureInfo.InvariantCulture);
         }
 
 
