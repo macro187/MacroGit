@@ -205,6 +205,40 @@ namespace MacroGit
 
 
         /// <summary>
+        /// Resolve a commit name to a shortened commit identifier
+        /// </summary>
+        ///
+        /// <param name="minimumLength">
+        /// Minimum length of the shortened commit identifier, or <c>0</c> for Git to choose automatically
+        /// </param>
+        ///
+        public GitCommitName GetShortCommitId(GitCommitName commitName, int minimumLength=0)
+        {
+            Guard.NotNull(commitName, nameof(commitName));
+            if (minimumLength < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(minimumLength));
+            }
+            if (0 < minimumLength && minimumLength < 4)
+            {
+                throw new ArgumentOutOfRangeException(nameof(minimumLength));
+            }
+
+            var length = minimumLength == 0 ? "auto" : minimumLength.ToString();
+
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
+                "rev-parse", $"--short={length}", commitName);
+
+            if (r.ExitCode != 0)
+            {
+                throw new GitException("Get short commit ID failed", r);
+            }
+
+            return new GitCommitName(r.StandardOutput.Trim());
+        }
+
+
+        /// <summary>
         /// Get the name of the currently-checked-out branch
         /// </summary>
         ///
