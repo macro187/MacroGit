@@ -704,19 +704,52 @@ namespace MacroGit
         ///
         public int Distance(GitCommitName from, GitCommitName to)
         {
+            return ListCommits(from, to).Count();
+        }
+
+
+        /// <summary>
+        /// List commit IDs from one commit to another
+        /// </summary>
+        ///
+        /// <remarks>
+        /// <paramref name="from"/> is not included in the output, but <paramref name="to"/> is.
+        /// </remarks>
+        ///
+        /// <param name="from">
+        /// The commit to list from, or <c>null</c> to list from the beginning of history
+        /// </param>
+        ///
+        /// <param name="to">
+        /// The commit to list to
+        /// </param>
+        ///
+        /// <returns>
+        /// The list of IDs of commits between <paramref name="from"/> and <paramref name="to"/> in (more or less)
+        /// chronological order
+        /// </returns>
+        ///
+        public IEnumerable<GitCommitName> ListCommits(GitCommitName from, GitCommitName to)
+        {
             Guard.NotNull(to, nameof(to));
 
             var path = from != null ? $"{from}..{to}" : to;
 
             var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "rev-list", "--count", path);
+                "rev-list", path);
 
             if (result.ExitCode != 0)
             {
-                throw new GitException("Calculate distance failed", result);
+                throw new GitException("List commits failed", result);
             }
 
-            return int.Parse(result.CombinedOutput.Trim());
+            var output = result.CombinedOutput.Trim();
+            return
+                StringExtensions.SplitLines(output)
+                    .Select(line => line.Trim())
+                    .Where(line => line.Length > 0)
+                    .Select(line => new GitCommitName(line))
+                    .Reverse();
         }
 
 
