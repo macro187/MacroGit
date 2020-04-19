@@ -777,6 +777,26 @@ namespace MacroGit
 
 
         /// <summary>
+        /// Get a commit's message
+        /// </summary>
+        ///
+        public string GetCommitMessage(GitCommitName name)
+        {
+            Guard.NotNull(name, nameof(name));
+
+            var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
+                "log", "--format=%B", "--max-count=1", name);
+
+            if (result.ExitCode != 0)
+            {
+                throw new GitException("Get commit message failed", result);
+            }
+
+            return result.CombinedOutput.Trim();
+        }
+
+
+        /// <summary>
         /// Parse ref listings
         /// </summary>
         ///
