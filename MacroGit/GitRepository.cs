@@ -349,7 +349,7 @@ namespace MacroGit
             //
             // CreateBranch() fails if the branch already exists, so match that behaviour
             //
-            if (GetBranches().Any(@ref => @ref.Name == refName))
+            if (GetBranches().Any(@ref => @ref.FullName == refName))
             {
                 throw new GitException($"A branch named '{name}' already exists");
             }

@@ -1,3 +1,4 @@
+using System.Linq;
 using MacroGuards;
 
 namespace MacroGit
@@ -10,17 +11,19 @@ namespace MacroGit
     public class GitRef
     {
 
-        public GitRef(GitRefName name, GitSha1 target)
+        public GitRef(GitRefName fullName, GitSha1 target)
         {
-            Guard.NotNull(name, nameof(name));
+            Guard.NotNull(fullName, nameof(fullName));
             Guard.NotNull(target, nameof(target));
 
-            Name = name;
+            FullName = fullName;
+            Name = new GitRefNameComponent(fullName.ToString().Split('/').Last());
             Target = target;
         }
 
 
-        public GitRefName Name { get; }
+        public GitRefNameComponent Name { get; }
+        public GitRefName FullName { get; }
         public GitSha1 Target { get; }
 
     }
