@@ -146,31 +146,31 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Determine whether the named commit exists in the repository
+        /// Determine whether a rev resolves to a commit in the repository
         /// </summary>
         ///
-        public bool Exists(GitCommitName commitName)
+        public bool Exists(GitRev rev)
         {
-            return TryGetCommitId(commitName, out var _);
+            return TryGetCommitId(rev, out var _);
         }
 
 
         /// <summary>
-        /// Try resolving a commit name to a unique commit identifier
+        /// Try resolving a rev to a commit sha1
         /// </summary>
         ///
-        public bool TryGetCommitId(GitCommitName commitName, out GitCommitName commitIdentifier)
+        public bool TryGetCommitId(GitRev rev, out GitSha1 sha1)
         {
-            Guard.NotNull(commitName, nameof(commitName));
+            Guard.NotNull(rev, nameof(rev));
 
             try
             {
-                commitIdentifier = GetCommitId(commitName);
+                sha1 = GetCommitId(rev);
                 return true;
             }
             catch (GitException)
             {
-                commitIdentifier = default;
+                sha1 = default;
                 return false;
             }
         }
@@ -180,41 +180,44 @@ namespace MacroGit
         /// Get the globally-unique identifier of the currently-checked-out commit
         /// </summary>
         ///
-        public GitCommitName GetCommitId()
+        public GitSha1 GetCommitId()
         {
-            return GetCommitId(new GitCommitName("HEAD"));
+            return GetCommitId(new GitRev("HEAD"));
         }
 
 
         /// <summary>
-        /// Resolve a commit name to a unique commit identifier
+        /// Resolve a rev to a commit sha1
         /// </summary>
         ///
-        public GitCommitName GetCommitId(GitCommitName commitName)
+        public GitSha1 GetCommitId(GitRev rev)
         {
-            Guard.NotNull(commitName, nameof(commitName));
+            Guard.NotNull(rev, nameof(rev));
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "rev-parse", "-q", "--verify", $"{commitName}^{{commit}}");
+                "rev-parse", "-q", "--verify", $"{rev}^{{commit}}");
 
             if (r.ExitCode != 0)
-                throw new GitException("Get commit ID failed", r);
+            {
+                throw new GitException("Resolve rev to commit sha1 failed", r);
+            }
 
-            return new GitCommitName(r.StandardOutput.Trim());
+            return new GitSha1(r.StandardOutput.Trim());
         }
 
 
         /// <summary>
-        /// Resolve a commit name to a shortened commit identifier
+        /// Resolve a rev to a shortened commit sha1
         /// </summary>
         ///
         /// <param name="minimumLength">
-        /// Minimum length of the shortened commit identifier, or <c>0</c> for Git to choose automatically
+        /// Minimum length of the shortened sha1, or <c>0</c> for Git to choose automatically
         /// </param>
         ///
-        public GitCommitName GetShortCommitId(GitCommitName commitName, int minimumLength=0)
+        public GitShortSha1 GetShortCommitId(GitRev rev, int minimumLength = 0)
         {
-            Guard.NotNull(commitName, nameof(commitName));
+            Guard.NotNull(rev, nameof(rev));
+
             if (minimumLength < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(minimumLength));
@@ -227,14 +230,14 @@ namespace MacroGit
             var length = minimumLength == 0 ? "auto" : minimumLength.ToString();
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "rev-parse", $"--short={length}", commitName);
+                "rev-parse", $"--short={length}", rev);
 
             if (r.ExitCode != 0)
             {
-                throw new GitException("Get short commit ID failed", r);
+                throw new GitException("Resolve rev to short commit sha1 failed", r);
             }
 
-            return new GitCommitName(r.StandardOutput.Trim());
+            return new GitShortSha1(r.StandardOutput.Trim());
         }
 
 
@@ -248,7 +251,7 @@ namespace MacroGit
         /// <c>null</c> if no branch is checked out
         /// </returns>
         ///
-        public GitCommitName GetBranch()
+        public GitRefNameComponent GetBranch()
         {
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "rev-parse", "--abbrev-ref", "HEAD");
 
@@ -258,7 +261,7 @@ namespace MacroGit
             var branchName = r.StandardOutput.Trim();
             if (branchName == "HEAD") return null;
 
-            return new GitCommitName(branchName);
+            return new GitRefNameComponent(branchName);
         }
 
 
@@ -303,14 +306,16 @@ namespace MacroGit
         /// Create a branch
         /// </summary>
         ///
-        public void CreateBranch(GitCommitName name)
+        public void CreateBranch(GitRefNameComponent name)
         {
             Guard.NotNull(name, nameof(name));
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch", name);
 
             if (r.ExitCode != 0)
+            {
                 throw new GitException("Create branch failed", r);
+            }
         }
 
 
@@ -318,7 +323,7 @@ namespace MacroGit
         /// Create or move a branch to the currently-checked-out commit
         /// </summary>
         ///
-        public void CreateOrMoveBranch(GitCommitName name)
+        public void CreateOrMoveBranch(GitRefNameComponent name)
         {
             Guard.NotNull(name, nameof(name));
 
@@ -333,18 +338,23 @@ namespace MacroGit
         /// Create a symbolic reference branch that points to another
         /// </summary>
         ///
-        public void CreateSymbolicBranch(GitCommitName name, GitCommitName target)
+        public void CreateSymbolicBranch(GitRefNameComponent name, GitRefNameComponent target)
         {
             Guard.NotNull(name, nameof(name));
             Guard.NotNull(target, nameof(target));
 
-            // CreateBranch() fails if the branch already exists, so match that behaviour
-            if (GetBranches().Select(b => b.Name).Contains(name))
-                throw new GitException("A branch named '" + name + "' already exists");
+            var refName = new GitRefName($"refs/heads/{name}");
+            var targetRefName = new GitRefName($"refs/heads/{target}");
 
-            var symbolicName = new GitCommitName("refs/heads/" + name);
-            var symbolicTarget = new GitCommitName("refs/heads/" + target);
-            CreateSymbolicReference(symbolicName, symbolicTarget);
+            //
+            // CreateBranch() fails if the branch already exists, so match that behaviour
+            //
+            if (GetBranches().Any(@ref => @ref.Name == refName))
+            {
+                throw new GitException($"A branch named '{name}' already exists");
+            }
+
+            CreateSymbolicReference(refName, targetRefName);
         }
 
 
@@ -352,12 +362,12 @@ namespace MacroGit
         /// Is a branch actually a symbolic reference?
         /// </summary>
         ///
-        public bool IsSymbolicBranch(GitCommitName name)
+        public bool IsSymbolicBranch(GitRefNameComponent name)
         {
             Guard.NotNull(name, nameof(name));
 
-            var symbolicName = new GitCommitName("refs/heads/" + name);
-            return IsSymbolicReference(symbolicName);
+            var refName = new GitRefName($"refs/heads/{name}");
+            return IsSymbolicReference(refName);
         }
 
 
@@ -367,25 +377,27 @@ namespace MacroGit
         ///
         /// <remarks>
         /// If <paramref name="name"/> is a symbolic ref, it is deleted using
-        /// <see cref="DeleteSymbolicReference(GitCommitName)"/>.  Otherwise, it is treated as a regular branch and deleted
+        /// <see cref="DeleteSymbolicReference(GitRefName)"/>.  Otherwise, it is treated as a regular branch and deleted
         /// using <c>git branch -D</c>.
         /// </remarks>
         ///
-        public void DeleteBranch(GitCommitName name)
+        public void DeleteBranch(GitRefNameComponent name)
         {
             Guard.NotNull(name, nameof(name));
 
-            var symbolicName = new GitCommitName("refs/heads/" + name);
-            if (IsSymbolicReference(symbolicName))
+            var refName = new GitRefName($"refs/heads/{name}");
+            if (IsSymbolicReference(refName))
             {
-                DeleteSymbolicReference(symbolicName);
+                DeleteSymbolicReference(refName);
                 return;
             }
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch", "-D", name);
 
             if (r.ExitCode != 0)
+            {
                 throw new GitException("Delete branch failed", r);
+            }
         }
 
 
@@ -431,7 +443,7 @@ namespace MacroGit
         /// Create a tag
         /// </summary>
         ///
-        public void CreateTag(GitCommitName name)
+        public void CreateTag(GitRefNameComponent name)
         {
             Guard.NotNull(name, nameof(name));
 
@@ -446,7 +458,7 @@ namespace MacroGit
         /// Delete a tag
         /// </summary>
         ///
-        public void DeleteTag(GitCommitName name)
+        public void DeleteTag(GitRefNameComponent name)
         {
             Guard.NotNull(name, nameof(name));
 
@@ -461,7 +473,7 @@ namespace MacroGit
         /// Create a symbolic reference
         /// </summary>
         ///
-        public void CreateSymbolicReference(GitCommitName name, GitCommitName target)
+        public void CreateSymbolicReference(GitRefName name, GitRefName target)
         {
             Guard.NotNull(name, nameof(name));
             Guard.NotNull(target, nameof(target));
@@ -477,14 +489,16 @@ namespace MacroGit
         /// Delete a symbolic reference
         /// </summary>
         ///
-        public void DeleteSymbolicReference(GitCommitName name)
+        public void DeleteSymbolicReference(GitRefName name)
         {
             Guard.NotNull(name, nameof(name));
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "symbolic-ref", "--delete", name);
 
             if (r.ExitCode != 0)
+            {
                 throw new GitException("Delete symbolic ref failed", r);
+            }
         }
 
 
@@ -492,7 +506,7 @@ namespace MacroGit
         /// Is a commit name a symbolic reference?
         /// </summary>
         ///
-        public bool IsSymbolicReference(GitCommitName name)
+        public bool IsSymbolicReference(GitRefName name)
         {
             Guard.NotNull(name, nameof(name));
 
@@ -565,15 +579,20 @@ namespace MacroGit
         /// The checkout operation failed
         /// </exception>
         ///
-        public void Checkout(GitCommitName commit)
+        public void Checkout(GitRev rev)
         {
-            Guard.NotNull(commit, nameof(commit));
-            if (HasUncommittedChanges())
-                throw new InvalidOperationException("Repository contains uncommitted changes");
+            Guard.NotNull(rev, nameof(rev));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "checkout", commit);
+            if (HasUncommittedChanges())
+            {
+                throw new InvalidOperationException("Repository contains uncommitted changes");
+            }
+
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "checkout", rev);
             if (r.ExitCode != 0)
+            {
                 throw new GitException("Checkout failed", r);
+            }
         }
 
 
@@ -602,7 +621,7 @@ namespace MacroGit
         /// </returns>
         ///
         public string Push(
-            IEnumerable<GitCommitName> refs,
+            IEnumerable<GitRefName> refs,
             string remote = "origin",
             bool dryRun = false,
             bool echoOutput = false)
@@ -656,7 +675,7 @@ namespace MacroGit
         /// Is one commit the ancestor of another?
         /// </summary>
         ///
-        public bool IsAncestor(GitCommitName ancestor, GitCommitName descendent)
+        public bool IsAncestor(GitRev ancestor, GitRev descendent)
         {
             Guard.NotNull(ancestor, nameof(ancestor));
             Guard.NotNull(descendent, nameof(descendent));
@@ -684,7 +703,7 @@ namespace MacroGit
         /// The commit to measure to
         /// </param>
         ///
-        public int Distance(GitCommitName to)
+        public int Distance(GitRev to)
         {
             return Distance(null, to);
         }
@@ -702,7 +721,7 @@ namespace MacroGit
         /// The commit to measure to
         /// </param>
         ///
-        public int Distance(GitCommitName from, GitCommitName to)
+        public int Distance(GitRev from, GitRev to)
         {
             return ListCommits(from, to).Count();
         }
@@ -729,7 +748,7 @@ namespace MacroGit
         /// chronological order
         /// </returns>
         ///
-        public IEnumerable<GitCommitName> ListCommits(GitCommitName from, GitCommitName to)
+        public IEnumerable<GitSha1> ListCommits(GitRev from, GitRev to)
         {
             Guard.NotNull(to, nameof(to));
 
@@ -748,7 +767,7 @@ namespace MacroGit
                 StringExtensions.SplitLines(output)
                     .Select(line => line.Trim())
                     .Where(line => line.Length > 0)
-                    .Select(line => new GitCommitName(line))
+                    .Select(line => new GitSha1(line))
                     .Reverse();
         }
 
@@ -757,12 +776,12 @@ namespace MacroGit
         /// Get a commit's committer date
         /// </summary>
         ///
-        public DateTimeOffset GetCommitterDate(GitCommitName name)
+        public DateTimeOffset GetCommitterDate(GitRev rev)
         {
-            Guard.NotNull(name, nameof(name));
+            Guard.NotNull(rev, nameof(rev));
 
             var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "show", "-s", "--format=%cI", name);
+                "show", "-s", "--format=%cI", rev);
 
             if (result.ExitCode != 0)
             {
@@ -780,12 +799,12 @@ namespace MacroGit
         /// Get a commit's message
         /// </summary>
         ///
-        public string GetCommitMessage(GitCommitName name)
+        public string GetCommitMessage(GitRev rev)
         {
-            Guard.NotNull(name, nameof(name));
+            Guard.NotNull(rev, nameof(rev));
 
             var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "log", "--format=%B", "--max-count=1", name);
+                "log", "--format=%B", "--max-count=1", rev);
 
             if (result.ExitCode != 0)
             {
@@ -814,29 +833,27 @@ namespace MacroGit
                     // "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8        refs/tags/1.7.0"
                     .Select(s => s.Split(new[]{' ', '\t'}, 2))
                     // ["08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8", "       refs/tags/1.7.0"]
-                    .Select(a => (Name: a[1].Trim(), Id: a[0].Trim()))
+                    .Select(a => (RefName: a[1].Trim(), Target: a[0].Trim()));
                     // ("refs/tags/1.7.0", "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8")
-                    .Select(t => (Name: t.Name.Split('/').Last(), Id: t.Id));
-                    // ("1.7.0", "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8")
 
             if (dereferenceTags)
             {
                 entries = entries.ToList();
 
-                var entriesDictionary = entries.ToDictionary(t => t.Name, t => t.Id);
+                var entriesDictionary = entries.ToDictionary(t => t.RefName, t => t.Target);
 
                 string LookupDereferencedId(string name) =>
                     entriesDictionary.TryGetValue($"{name}^{{}}", out var id) ? id : null;
 
                 entries =
                     entries
-                        .Where(t => !t.Name.EndsWith("^{}"))
-                        .Select(t => (t.Name, Id: LookupDereferencedId(t.Name) ?? t.Id));
+                        .Where(t => !t.RefName.EndsWith("^{}"))
+                        .Select(t => (t.RefName, Target: LookupDereferencedId(t.RefName) ?? t.Target));
             }
 
             return
                 entries
-                    .Select(t => new GitRef(new GitCommitName(t.Name), new GitCommitName(t.Id)));
+                    .Select(t => new GitRef(new GitRefName(t.RefName), new GitSha1(t.Target)));
         }
 
     }

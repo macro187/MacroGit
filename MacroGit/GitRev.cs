@@ -1,29 +1,28 @@
 using System;
-using System.Text.RegularExpressions;
 using MacroGuards;
 
 namespace MacroGit
 {
 
     /// <summary>
-    /// A Git repository name
+    /// A string that specifies a particular commit in any way
     /// </summary>
     ///
     /// <remarks>
     /// https://git-scm.com/docs/gitrevisions
     /// </remarks>
     ///
-    public partial class GitRepositoryName
+    public partial class GitRev
     {
 
-        public static implicit operator string(GitRepositoryName repositoryName)
+        public static implicit operator string(GitRev rev)
         {
-            if (repositoryName == null) return null;
-            return repositoryName.ToString();
+            if (rev == null) return null;
+            return rev.ToString();
         }
 
 
-        public static bool operator ==(GitRepositoryName a, GitRepositoryName b)
+        public static bool operator ==(GitRev a, GitRev b)
         {
             if (a is null && b is null) return true;
             if (a is null || b is null) return false;
@@ -31,13 +30,13 @@ namespace MacroGit
         }
 
 
-        public static bool operator !=(GitRepositoryName a, GitRepositoryName b)
+        public static bool operator !=(GitRev a, GitRev b)
         {
             return !(a == b);
         }
 
 
-        public GitRepositoryName(string value)
+        public GitRev(string value)
         {
             Guard.NotNull(value, nameof(value));
 
@@ -46,9 +45,9 @@ namespace MacroGit
                 throw new FormatException("Empty");
             }
 
-            if (!Regex.IsMatch(value, @"^[A-Za-z0-9_.-]+$"))
+            if (string.IsNullOrWhiteSpace(value))
             {
-                throw new FormatException("Contains invalid characters");
+                throw new FormatException("Whitespace-only");
             }
 
             this.value = value;

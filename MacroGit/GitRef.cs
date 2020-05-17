@@ -4,24 +4,24 @@ namespace MacroGit
 {
 
     /// <summary>
-    /// A commit name plus the unique identifier of the commit it refers to
+    /// A refname plus the sha1 of the object it refers to
     /// </summary>
     ///
     public class GitRef
     {
 
-        public GitRef(GitCommitName name, GitCommitName id)
+        public GitRef(GitRefName name, GitSha1 target)
         {
             Guard.NotNull(name, nameof(name));
-            Guard.NotNull(id, nameof(id));
+            Guard.NotNull(target, nameof(target));
 
             Name = name;
-            Id = id;
+            Target = target;
         }
 
 
-        public GitCommitName Name { get; }
-        public GitCommitName Id { get; }
+        public GitRefName Name { get; }
+        public GitSha1 Target { get; }
 
     }
 }

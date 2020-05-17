@@ -6,24 +6,24 @@ namespace MacroGit
 {
 
     /// <summary>
-    /// A Git repository name
+    /// A full refname, possibly including path separators
     /// </summary>
     ///
     /// <remarks>
     /// https://git-scm.com/docs/gitrevisions
     /// </remarks>
     ///
-    public partial class GitRepositoryName
+    public partial class GitRefName
     {
 
-        public static implicit operator string(GitRepositoryName repositoryName)
+        public static implicit operator string(GitRefName refName)
         {
-            if (repositoryName == null) return null;
-            return repositoryName.ToString();
+            if (refName == null) return null;
+            return refName.ToString();
         }
 
 
-        public static bool operator ==(GitRepositoryName a, GitRepositoryName b)
+        public static bool operator ==(GitRefName a, GitRefName b)
         {
             if (a is null && b is null) return true;
             if (a is null || b is null) return false;
@@ -31,13 +31,13 @@ namespace MacroGit
         }
 
 
-        public static bool operator !=(GitRepositoryName a, GitRepositoryName b)
+        public static bool operator !=(GitRefName a, GitRefName b)
         {
             return !(a == b);
         }
 
 
-        public GitRepositoryName(string value)
+        public GitRefName(string value)
         {
             Guard.NotNull(value, nameof(value));
 
@@ -46,7 +46,7 @@ namespace MacroGit
                 throw new FormatException("Empty");
             }
 
-            if (!Regex.IsMatch(value, @"^[A-Za-z0-9_.-]+$"))
+            if (!Regex.IsMatch(value, @"^[A-Za-z0-9/_.-]+$"))
             {
                 throw new FormatException("Contains invalid characters");
             }

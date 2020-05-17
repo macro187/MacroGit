@@ -6,24 +6,24 @@ namespace MacroGit
 {
 
     /// <summary>
-    /// A Git repository name
+    /// A refname component
     /// </summary>
     ///
     /// <remarks>
     /// https://git-scm.com/docs/gitrevisions
     /// </remarks>
     ///
-    public partial class GitRepositoryName
+    public partial class GitRefNameComponent
     {
 
-        public static implicit operator string(GitRepositoryName repositoryName)
+        public static implicit operator string(GitRefNameComponent refNameComponent)
         {
-            if (repositoryName == null) return null;
-            return repositoryName.ToString();
+            if (refNameComponent == null) return null;
+            return refNameComponent.ToString();
         }
 
 
-        public static bool operator ==(GitRepositoryName a, GitRepositoryName b)
+        public static bool operator ==(GitRefNameComponent a, GitRefNameComponent b)
         {
             if (a is null && b is null) return true;
             if (a is null || b is null) return false;
@@ -31,13 +31,13 @@ namespace MacroGit
         }
 
 
-        public static bool operator !=(GitRepositoryName a, GitRepositoryName b)
+        public static bool operator !=(GitRefNameComponent a, GitRefNameComponent b)
         {
             return !(a == b);
         }
 
 
-        public GitRepositoryName(string value)
+        public GitRefNameComponent(string value)
         {
             Guard.NotNull(value, nameof(value));
 

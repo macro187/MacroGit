@@ -1,6 +1,6 @@
 namespace MacroGit
 {
-    public partial class GitRepositoryName
+    public partial class GitRefNameComponent
     {
 
         public override string ToString()
@@ -12,8 +12,8 @@ namespace MacroGit
         public override bool Equals(object obj)
         {
             if (obj is null) return false;
-            if (!(obj is GitRepositoryName repositoryName)) return false;
-            return Equals(repositoryName);
+            if (!(obj is GitRefNameComponent refNameComponent)) return false;
+            return Equals(refNameComponent);
         }
 
 
@@ -21,7 +21,7 @@ namespace MacroGit
         {
             unchecked
             {
-                int hash = typeof(GitRepositoryName).GetHashCode();
+                int hash = typeof(GitRefNameComponent).GetHashCode();
                 hash = hash * 23 + value.GetHashCode();
                 return hash;
             }
