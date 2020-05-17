@@ -276,7 +276,7 @@ namespace MacroGit
             switch (r.ExitCode)
             {
                 case 0:
-                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput), false);
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
                 default:
                     throw new GitException("Get remote branches failed", r);
             }
@@ -295,7 +295,7 @@ namespace MacroGit
             {
                 case 0:
                 case 1:
-                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput), false);
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
                 default:
                     throw new GitException("Get branches failed", r);
             }
@@ -412,7 +412,7 @@ namespace MacroGit
             switch (r.ExitCode)
             {
                 case 0:
-                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput), true);
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
                 default:
                     throw new GitException("Get remote tags failed", r);
             }
@@ -432,7 +432,7 @@ namespace MacroGit
             {
                 case 0:
                 case 1:
-                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput), true);
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
                 default:
                     throw new GitException("Get tags failed", r);
             }
@@ -816,14 +816,10 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Parse ref listings
+        /// Parse refs output from ls-remote or show-ref
         /// </summary>
         ///
-        /// <param name="dereferenceTags">
-        /// Whether to dereference annotated tags to the commits they point to using special entries ending in "^{}"
-        /// </param>
-        ///
-        IEnumerable<GitRef> ParseRefLines(IEnumerable<string> lines, bool dereferenceTags)
+        IEnumerable<GitRef> ParseRefLines(IEnumerable<string> lines)
         {
             var entries =
                 lines
@@ -833,26 +829,19 @@ namespace MacroGit
                     // "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8        refs/tags/1.7.0"
                     .Select(s => s.Split(new[]{' ', '\t'}, 2))
                     // ["08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8", "       refs/tags/1.7.0"]
-                    .Select(a => (RefName: a[1].Trim(), Target: a[0].Trim()));
+                    .Select(a => (RefName: a[1].Trim(), Target: a[0].Trim()))
                     // ("refs/tags/1.7.0", "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8")
+                    .ToList();
 
-            if (dereferenceTags)
-            {
-                entries = entries.ToList();
+            var lookup = entries.ToDictionary(t => t.RefName, t => t.Target);
 
-                var entriesDictionary = entries.ToDictionary(t => t.RefName, t => t.Target);
-
-                string LookupDereferencedId(string name) =>
-                    entriesDictionary.TryGetValue($"{name}^{{}}", out var id) ? id : null;
-
-                entries =
-                    entries
-                        .Where(t => !t.RefName.EndsWith("^{}"))
-                        .Select(t => (t.RefName, Target: LookupDereferencedId(t.RefName) ?? t.Target));
-            }
+            string Dereference(string name) =>
+                lookup.TryGetValue($"{name}^{{}}", out var sha1) ? sha1 : null;
 
             return
                 entries
+                    .Where(t => !t.RefName.EndsWith("^{}", StringComparison.Ordinal))
+                    .Select(t => (t.RefName, Target: Dereference(t.RefName) ?? t.Target))
                     .Select(t => new GitRef(new GitRefName(t.RefName), new GitSha1(t.Target)));
         }
 
