@@ -303,6 +303,43 @@ namespace MacroGit
 
 
         /// <summary>
+        /// Get all refs
+        /// </summary>
+        ///
+        public IEnumerable<GitRef> GetRefs()
+        {
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "show-ref");
+
+            switch (r.ExitCode)
+            {
+                case 0:
+                case 1:
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
+                default:
+                    throw new GitException("Get refs failed", r);
+            }
+        }
+
+
+        /// <summary>
+        /// Get all remote refs
+        /// </summary>
+        ///
+        public IEnumerable<GitRef> GetRemoteRefs()
+        {
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote");
+
+            switch (r.ExitCode)
+            {
+                case 0:
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
+                default:
+                    throw new GitException("Get remote refs failed", r);
+            }
+        }
+
+
+        /// <summary>
         /// Create a branch
         /// </summary>
         ///
