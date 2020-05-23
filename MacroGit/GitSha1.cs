@@ -1,6 +1,4 @@
 using System;
-using System.Text.RegularExpressions;
-using MacroGuards;
 
 namespace MacroGit
 {
@@ -13,63 +11,17 @@ namespace MacroGit
     /// https://git-scm.com/docs/gitrevisions
     /// </remarks>
     ///
-    public partial class GitSha1
+    public class GitSha1 : GitShortSha1
     {
 
-        public static implicit operator string(GitSha1 sha1)
-        {
-            if (sha1 == null) return null;
-            return sha1.ToString();
-        }
-
-
-        public static implicit operator GitRev(GitSha1 sha1)
-        {
-            if (sha1 == null) return null;
-            return new GitRev(sha1.ToString());
-        }
-
-
-        public static implicit operator GitShortSha1(GitSha1 sha1)
-        {
-            if (sha1 == null) return null;
-            return new GitShortSha1(sha1.ToString());
-        }
-
-
-        public static bool operator ==(GitSha1 a, GitSha1 b)
-        {
-            if (a is null && b is null) return true;
-            if (a is null || b is null) return false;
-            return a.Equals(b);
-        }
-
-
-        public static bool operator !=(GitSha1 a, GitSha1 b)
-        {
-            return !(a == b);
-        }
-
-
         public GitSha1(string value)
+            : base(value)
         {
-            Guard.NotNull(value, nameof(value));
-
-            if (string.IsNullOrEmpty(value))
+            if (value.Length < 40)
             {
-                throw new FormatException("Empty");
+                throw new FormatException("Too short");
             }
-
-            if (!Regex.IsMatch(value, @"^[a-f0-9]{40}$"))
-            {
-                throw new FormatException("Contains invalid characters");
-            }
-
-            this.value = value;
         }
-
-
-        readonly string value;
 
     }
 }

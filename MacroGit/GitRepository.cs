@@ -381,8 +381,8 @@ namespace MacroGit
             Guard.NotNull(name, nameof(name));
             Guard.NotNull(target, nameof(target));
 
-            var refName = new GitRefName($"refs/heads/{name}");
-            var targetRefName = new GitRefName($"refs/heads/{target}");
+            var refName = new GitFullRefName($"refs/heads/{name}");
+            var targetRefName = new GitFullRefName($"refs/heads/{target}");
 
             //
             // CreateBranch() fails if the branch already exists, so match that behaviour
@@ -404,7 +404,7 @@ namespace MacroGit
         {
             Guard.NotNull(name, nameof(name));
 
-            var refName = new GitRefName($"refs/heads/{name}");
+            var refName = new GitFullRefName($"refs/heads/{name}");
             return IsSymbolicReference(refName);
         }
 
@@ -415,15 +415,15 @@ namespace MacroGit
         ///
         /// <remarks>
         /// If <paramref name="name"/> is a symbolic ref, it is deleted using
-        /// <see cref="DeleteSymbolicReference(GitRefName)"/>.  Otherwise, it is treated as a regular branch and deleted
-        /// using <c>git branch -D</c>.
+        /// <see cref="DeleteSymbolicReference(GitFullRefName)"/>.  Otherwise, it is treated as a regular branch and
+        /// deleted using <c>git branch -D</c>.
         /// </remarks>
         ///
         public void DeleteBranch(GitRefNameComponent name)
         {
             Guard.NotNull(name, nameof(name));
 
-            var refName = new GitRefName($"refs/heads/{name}");
+            var refName = new GitFullRefName($"refs/heads/{name}");
             if (IsSymbolicReference(refName))
             {
                 DeleteSymbolicReference(refName);
@@ -511,7 +511,7 @@ namespace MacroGit
         /// Create a symbolic reference
         /// </summary>
         ///
-        public void CreateSymbolicReference(GitRefName name, GitRefName target)
+        public void CreateSymbolicReference(GitFullRefName name, GitFullRefName target)
         {
             Guard.NotNull(name, nameof(name));
             Guard.NotNull(target, nameof(target));
@@ -527,7 +527,7 @@ namespace MacroGit
         /// Delete a symbolic reference
         /// </summary>
         ///
-        public void DeleteSymbolicReference(GitRefName name)
+        public void DeleteSymbolicReference(GitFullRefName name)
         {
             Guard.NotNull(name, nameof(name));
 
@@ -544,7 +544,7 @@ namespace MacroGit
         /// Is a commit name a symbolic reference?
         /// </summary>
         ///
-        public bool IsSymbolicReference(GitRefName name)
+        public bool IsSymbolicReference(GitFullRefName name)
         {
             Guard.NotNull(name, nameof(name));
 
@@ -659,7 +659,7 @@ namespace MacroGit
         /// </returns>
         ///
         public string Push(
-            IEnumerable<GitRefName> refs,
+            IEnumerable<GitFullRefName> refs,
             string remote = "origin",
             bool dryRun = false,
             bool echoOutput = false)
@@ -867,20 +867,20 @@ namespace MacroGit
                     // "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8        refs/tags/1.7.0"
                     .Select(s => s.Split(new[]{' ', '\t'}, 2))
                     // ["08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8", "       refs/tags/1.7.0"]
-                    .Select(a => (RefName: a[1].Trim(), Target: a[0].Trim()))
+                    .Select(a => (Name: a[1].Trim(), Target: a[0].Trim()))
                     // ("refs/tags/1.7.0", "08c471b4f1c4c1f1fcdd506bc291d1c3e7e383d8")
                     .ToList();
 
-            var lookup = entries.ToDictionary(t => t.RefName, t => t.Target);
+            var lookup = entries.ToDictionary(t => t.Name, t => t.Target);
 
             string Dereference(string name) =>
                 lookup.TryGetValue($"{name}^{{}}", out var sha1) ? sha1 : null;
 
             return
                 entries
-                    .Where(t => !t.RefName.EndsWith("^{}", StringComparison.Ordinal))
-                    .Select(t => (t.RefName, Target: Dereference(t.RefName) ?? t.Target))
-                    .Select(t => new GitRef(new GitRefName(t.RefName), new GitSha1(t.Target)));
+                    .Where(t => !t.Name.EndsWith("^{}", StringComparison.Ordinal))
+                    .Select(t => (t.Name, Target: Dereference(t.Name) ?? t.Target))
+                    .Select(t => new GitRef(new GitFullRefName(t.Name), new GitSha1(t.Target)));
         }
 
     }

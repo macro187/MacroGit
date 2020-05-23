@@ -50,6 +50,11 @@ namespace MacroGit
                 throw new FormatException("Whitespace-only");
             }
 
+            if (char.IsWhiteSpace(value[0]))
+            {
+                throw new FormatException("Begins with whitespace");
+            }
+
             this.value = value;
         }
 

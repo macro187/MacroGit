@@ -1,68 +1,47 @@
 using System;
 using System.Text.RegularExpressions;
-using MacroGuards;
 
 namespace MacroGit
 {
 
     /// <summary>
-    /// A full refname, possibly including path separators
+    /// A refname
     /// </summary>
+    ///
+    /// <remarks>
+    /// Refnames can be full paths, partial paths, or individual path components, and may be ambiguous.
+    /// </remarks>
     ///
     /// <remarks>
     /// https://git-scm.com/docs/gitrevisions
     /// </remarks>
     ///
-    public partial class GitRefName
+    public class GitRefName : GitRev
     {
 
-        public static implicit operator string(GitRefName refName)
-        {
-            if (refName == null) return null;
-            return refName.ToString();
-        }
-
-
-        public static implicit operator GitRev(GitRefName refName)
-        {
-            if (refName == null) return null;
-            return new GitRev(refName.ToString());
-        }
-
-
-        public static bool operator ==(GitRefName a, GitRefName b)
-        {
-            if (a is null && b is null) return true;
-            if (a is null || b is null) return false;
-            return a.Equals(b);
-        }
-
-
-        public static bool operator !=(GitRefName a, GitRefName b)
-        {
-            return !(a == b);
-        }
-
-
         public GitRefName(string value)
+            : base(value)
         {
-            Guard.NotNull(value, nameof(value));
-
-            if (string.IsNullOrEmpty(value))
-            {
-                throw new FormatException("Empty");
-            }
-
             if (!Regex.IsMatch(value, @"^[A-Za-z0-9/_.-]+$"))
             {
-                throw new FormatException("Contains invalid characters");
+                throw new FormatException("Invalid characters");
             }
 
-            this.value = value;
+            if (value.StartsWith("/"))
+            {
+                throw new FormatException("Starts with path separator");
+            }
+
+            if (value.EndsWith("/"))
+            {
+                throw new FormatException("Ends with path separator");
+            }
+
+            if (value.Contains("//"))
+            {
+                throw new FormatException("Multiple consecutive path separators");
+            }
         }
-
-
-        readonly string value;
 
     }
 }

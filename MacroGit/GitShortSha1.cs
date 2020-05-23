@@ -1,6 +1,5 @@
 using System;
 using System.Text.RegularExpressions;
-using MacroGuards;
 
 namespace MacroGit
 {
@@ -13,49 +12,27 @@ namespace MacroGit
     /// https://git-scm.com/docs/gitrevisions
     /// </remarks>
     ///
-    public partial class GitShortSha1
+    public class GitShortSha1 : GitRev
     {
 
-        public static implicit operator string(GitShortSha1 shortSha1)
-        {
-            if (shortSha1 == null) return null;
-            return shortSha1.ToString();
-        }
-
-
-        public static bool operator ==(GitShortSha1 a, GitShortSha1 b)
-        {
-            if (a is null && b is null) return true;
-            if (a is null || b is null) return false;
-            return a.Equals(b);
-        }
-
-
-        public static bool operator !=(GitShortSha1 a, GitShortSha1 b)
-        {
-            return !(a == b);
-        }
-
-
         public GitShortSha1(string value)
+            : base(value)
         {
-            Guard.NotNull(value, nameof(value));
-
-            if (string.IsNullOrEmpty(value))
+            if (value.Length < 4)
             {
-                throw new FormatException("Empty");
+                throw new FormatException("Too short");
             }
 
-            if (!Regex.IsMatch(value, @"^[a-f0-9]{4,40}$"))
+            if (value.Length > 40)
             {
-                throw new FormatException("Contains invalid characters");
+                throw new FormatException("Too long");
             }
 
-            this.value = value;
+            if (!Regex.IsMatch(value, @"^[a-f0-9]$"))
+            {
+                throw new FormatException("Invalid characters");
+            }
         }
-
-
-        readonly string value;
 
     }
 }

@@ -12,7 +12,7 @@ namespace MacroGit
     public class GitRef
     {
 
-        public GitRef(GitRefName fullName, GitSha1 target)
+        public GitRef(GitFullRefName fullName, GitSha1 target)
         {
             Guard.NotNull(fullName, nameof(fullName));
             Guard.NotNull(target, nameof(target));
@@ -26,7 +26,7 @@ namespace MacroGit
 
 
         public GitRefNameComponent Name { get; }
-        public GitRefName FullName { get; }
+        public GitFullRefName FullName { get; }
         public GitSha1 Target { get; }
         public bool IsBranch { get; }
         public bool IsTag { get; }
