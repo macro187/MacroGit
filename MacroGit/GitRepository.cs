@@ -308,7 +308,8 @@ namespace MacroGit
         ///
         public IEnumerable<GitRef> GetRefs()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "show-ref");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
+                "show-ref", "--head", "--dereference");
 
             switch (r.ExitCode)
             {
