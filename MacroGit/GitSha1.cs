@@ -6,7 +6,7 @@ namespace MacroGit
 {
 
     /// <summary>
-    /// A 40-character hexadecimal sha1 object name
+    /// A full 40-character hexadecimal sha1 object name
     /// </summary>
     ///
     /// <remarks>
@@ -20,6 +20,20 @@ namespace MacroGit
         {
             if (sha1 == null) return null;
             return sha1.ToString();
+        }
+
+
+        public static implicit operator GitRev(GitSha1 sha1)
+        {
+            if (sha1 == null) return null;
+            return new GitRev(sha1.ToString());
+        }
+
+
+        public static implicit operator GitShortSha1(GitSha1 sha1)
+        {
+            if (sha1 == null) return null;
+            return new GitShortSha1(sha1.ToString());
         }
 
 

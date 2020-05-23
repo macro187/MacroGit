@@ -6,7 +6,7 @@ namespace MacroGit
 {
 
     /// <summary>
-    /// A 40-character hexadecimal sha1 object name
+    /// A possibly-shortened hexadecimal sha1 object name
     /// </summary>
     ///
     /// <remarks>

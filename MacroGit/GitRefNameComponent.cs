@@ -23,6 +23,20 @@ namespace MacroGit
         }
 
 
+        public static implicit operator GitRefName(GitRefNameComponent refNameComponent)
+        {
+            if (refNameComponent == null) return null;
+            return new GitRefName(refNameComponent.ToString());
+        }
+
+
+        public static implicit operator GitRev(GitRefNameComponent refNameComponent)
+        {
+            if (refNameComponent == null) return null;
+            return new GitRev(refNameComponent.ToString());
+        }
+
+
         public static bool operator ==(GitRefNameComponent a, GitRefNameComponent b)
         {
             if (a is null && b is null) return true;
