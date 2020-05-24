@@ -28,7 +28,7 @@ namespace MacroGit
                 throw new FormatException("Too long");
             }
 
-            if (!Regex.IsMatch(value, @"^[a-f0-9]$"))
+            if (!Regex.IsMatch(value, @"^[a-f0-9]+$"))
             {
                 throw new FormatException("Invalid characters");
             }
