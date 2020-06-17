@@ -10,7 +10,7 @@ using IOPath = System.IO.Path;
 
 namespace MacroGit
 {
-    public class GitRepository
+    public partial class GitRepository
     {
 
         /// <summary>
@@ -790,67 +790,28 @@ namespace MacroGit
         {
             Guard.NotNull(to, nameof(to));
 
-            var path = from != null ? $"{from}..{to}" : to;
-
-            var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "rev-list", path);
-
-            if (result.ExitCode != 0)
-            {
-                throw new GitException("List commits failed", result);
-            }
-
-            var output = result.CombinedOutput.Trim();
+            var rev = new GitRev(from != null ? $"{from}..{to}" : to);
             return
-                StringExtensions.SplitLines(output)
-                    .Select(line => line.Trim())
-                    .Where(line => line.Length > 0)
-                    .Select(line => new GitSha1(line))
+                RevList(rev, -1)
+                    .Select(commit => commit.Sha1)
                     .Reverse();
         }
 
 
         /// <summary>
-        /// Get a commit's committer date
+        /// Get a commit's commit date
         /// </summary>
         ///
-        public DateTimeOffset GetCommitterDate(GitRev rev)
-        {
-            Guard.NotNull(rev, nameof(rev));
-
-            var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "show", "-s", "--format=%cI", rev);
-
-            if (result.ExitCode != 0)
-            {
-                throw new GitException("Git show failed", result);
-            }
-
-            return DateTimeOffset.ParseExact(
-                result.CombinedOutput.Trim(),
-                "yyyy-MM-ddTHH:mm:sszzz",
-                CultureInfo.InvariantCulture);
-        }
+        public DateTimeOffset GetCommitterDate(GitRev rev) =>
+            RevList(rev, 1).Single().CommitDate;
 
 
         /// <summary>
         /// Get a commit's message
         /// </summary>
         ///
-        public string GetCommitMessage(GitRev rev)
-        {
-            Guard.NotNull(rev, nameof(rev));
-
-            var result = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "log", "--format=%B", "--max-count=1", rev);
-
-            if (result.ExitCode != 0)
-            {
-                throw new GitException("Get commit message failed", result);
-            }
-
-            return result.CombinedOutput.Trim();
-        }
+        public string GetCommitMessage(GitRev rev) =>
+            RevList(rev, 1).Single().Message;
 
 
         /// <summary>

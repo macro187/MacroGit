@@ -20,6 +20,12 @@ namespace MacroGit
         }
 
 
+        public GitException(ProcessExecuteResult processExecuteResult)
+            : this(null, processExecuteResult)
+        {
+        }
+
+
         public GitException(string message, ProcessExecuteResult processExecuteResult)
             : this(
                 message,
