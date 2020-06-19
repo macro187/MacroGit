@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Linq;
 using MacroDiagnostics;
 using MacroGuards;
 
@@ -11,13 +11,29 @@ namespace MacroGit
 
         public IEnumerable<GitCommitInfo> RevList(GitRev rev)
         {
-            return RevList(rev, -1);
+            return RevList(-1, rev);
         }
 
 
-        public IEnumerable<GitCommitInfo> RevList(GitRev rev, int maxCount)
+        public IEnumerable<GitCommitInfo> RevList(int maxCount, GitRev rev)
         {
-            Guard.NotNull(rev, nameof(rev));
+            return RevList(maxCount, new[]{rev});
+        }
+
+
+        public IEnumerable<GitCommitInfo> RevList(int maxCount, IEnumerable<GitRev> revs)
+        {
+            Guard.NotNull(revs, nameof(revs));
+            revs = revs.ToList();
+            if (!revs.Any())
+            {
+                throw new ArgumentException("Empty", nameof(revs));
+            }
+            if (revs.Any(rev => rev == null))
+            {
+                throw new ArgumentException("Null item", nameof(revs));
+            }
+
             if (maxCount < -1)
             {
                 throw new ArgumentOutOfRangeException(nameof(maxCount));
@@ -26,7 +42,7 @@ namespace MacroGit
             var args =
                 new List<string>()
                 {
-                    "-C", Path, "rev-list", "--format=fuller", "--date=iso-strict",
+                    "-C", Path, "rev-list", "--format=fuller", "--date=iso-strict", "--parents",
                 };
 
             if (maxCount >= 0)
@@ -34,7 +50,7 @@ namespace MacroGit
                 args.Add($"--max-count={maxCount}");
             }
 
-            args.Add(rev);
+            args.AddRange(revs.Select(rev => rev.ToString()));
 
             try
             {
@@ -72,7 +88,13 @@ namespace MacroGit
             while (true)
             {
                 if (!lines.MoveNext()) break;
-                var sha1 = new GitSha1(RemovePrefix("commit ", lines.Current));
+                var sha1s =
+                    RemovePrefix("commit ", lines.Current)
+                        .Split(' ')
+                        .Select(s => new GitSha1(s))
+                        .ToList();
+                var sha1 = sha1s.First();
+                var parentSha1s = sha1s.Skip(1);
 
                 if (!lines.MoveNext()) UnexpectedEnd();
                 while (lines.Current.StartsWith("Merge:")) if (!lines.MoveNext()) UnexpectedEnd();
@@ -115,7 +137,8 @@ namespace MacroGit
                     throw new GitException($"Expected blank line from rev-list but got '{lines.Current}'");
                 }
 
-                yield return new GitCommitInfo(sha1, author, authorDate, committer, commitDate, messageLines);
+                yield return
+                    new GitCommitInfo(sha1, parentSha1s, author, authorDate, committer, commitDate, messageLines);
             }
         }
 

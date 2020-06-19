@@ -792,7 +792,7 @@ namespace MacroGit
 
             var rev = new GitRev(from != null ? $"{from}..{to}" : to);
             return
-                RevList(rev, -1)
+                RevList(-1, rev)
                     .Select(commit => commit.Sha1)
                     .Reverse();
         }
@@ -803,7 +803,7 @@ namespace MacroGit
         /// </summary>
         ///
         public DateTimeOffset GetCommitterDate(GitRev rev) =>
-            RevList(rev, 1).Single().CommitDate;
+            RevList(1, rev).Single().CommitDate;
 
 
         /// <summary>
@@ -811,7 +811,7 @@ namespace MacroGit
         /// </summary>
         ///
         public string GetCommitMessage(GitRev rev) =>
-            RevList(rev, 1).Single().Message;
+            RevList(1, rev).Single().Message;
 
 
         /// <summary>
