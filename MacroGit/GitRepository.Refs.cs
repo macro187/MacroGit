@@ -72,44 +72,6 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Get all refs
-        /// </summary>
-        ///
-        public IEnumerable<GitRef> GetRefs()
-        {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "show-ref", "--head", "--dereference");
-
-            switch (r.ExitCode)
-            {
-                case 0:
-                case 1:
-                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
-                default:
-                    throw new GitException("Get refs failed", r);
-            }
-        }
-
-
-        /// <summary>
-        /// Get all remote refs
-        /// </summary>
-        ///
-        public IEnumerable<GitRef> GetRemoteRefs()
-        {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote");
-
-            switch (r.ExitCode)
-            {
-                case 0:
-                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
-                default:
-                    throw new GitException("Get remote refs failed", r);
-            }
-        }
-
-
-        /// <summary>
         /// Create a branch
         /// </summary>
         ///
@@ -142,62 +104,12 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Create a symbolic reference branch that points to another
-        /// </summary>
-        ///
-        public void CreateSymbolicBranch(GitRefNameComponent name, GitRefNameComponent target)
-        {
-            Guard.NotNull(name, nameof(name));
-            Guard.NotNull(target, nameof(target));
-
-            var refName = new GitFullRefName($"refs/heads/{name}");
-            var targetRefName = new GitFullRefName($"refs/heads/{target}");
-
-            //
-            // CreateBranch() fails if the branch already exists, so match that behaviour
-            //
-            if (GetBranches().Any(@ref => @ref.FullName == refName))
-            {
-                throw new GitException($"A branch named '{name}' already exists");
-            }
-
-            CreateSymbolicReference(refName, targetRefName);
-        }
-
-
-        /// <summary>
-        /// Is a branch actually a symbolic reference?
-        /// </summary>
-        ///
-        public bool IsSymbolicBranch(GitRefNameComponent name)
-        {
-            Guard.NotNull(name, nameof(name));
-
-            var refName = new GitFullRefName($"refs/heads/{name}");
-            return IsSymbolicReference(refName);
-        }
-
-
-        /// <summary>
         /// Delete a branch
         /// </summary>
-        ///
-        /// <remarks>
-        /// If <paramref name="name"/> is a symbolic ref, it is deleted using
-        /// <see cref="DeleteSymbolicReference(GitFullRefName)"/>.  Otherwise, it is treated as a regular branch and
-        /// deleted using <c>git branch -D</c>.
-        /// </remarks>
         ///
         public void DeleteBranch(GitRefNameComponent name)
         {
             Guard.NotNull(name, nameof(name));
-
-            var refName = new GitFullRefName($"refs/heads/{name}");
-            if (IsSymbolicReference(refName))
-            {
-                DeleteSymbolicReference(refName);
-                return;
-            }
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch", "-D", name);
 
@@ -277,49 +189,67 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Create a symbolic reference
+        /// Get a symbolic ref's target
         /// </summary>
         ///
-        public void CreateSymbolicReference(GitFullRefName name, GitFullRefName target)
-        {
-            Guard.NotNull(name, nameof(name));
-            Guard.NotNull(target, nameof(target));
-
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "symbolic-ref", name, target);
-
-            if (r.ExitCode != 0)
-                throw new GitException("Create symbolic ref failed", r);
-        }
-
-
-        /// <summary>
-        /// Delete a symbolic reference
-        /// </summary>
+        /// <returns>
+        /// The name of the symbolic ref's target
+        /// - OR -
+        /// <c>null</c> if the ref is not symbolic
+        /// - OR -
+        /// <c>null</c> if the ref doesn't exist
+        /// </returns>
         ///
-        public void DeleteSymbolicReference(GitFullRefName name)
-        {
-            Guard.NotNull(name, nameof(name));
-
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "symbolic-ref", "--delete", name);
-
-            if (r.ExitCode != 0)
-            {
-                throw new GitException("Delete symbolic ref failed", r);
-            }
-        }
-
-
-        /// <summary>
-        /// Is a commit name a symbolic reference?
-        /// </summary>
-        ///
-        public bool IsSymbolicReference(GitFullRefName name)
+        public GitFullRefName FindSymbolicRefTarget(GitFullRefName name)
         {
             Guard.NotNull(name, nameof(name));
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "symbolic-ref", name);
 
-            return r.ExitCode == 0;
+            if (r.ExitCode != 0)
+            {
+                return null;
+            }
+
+            return new GitFullRefName(r.StandardOutput.Trim());
+        }
+
+
+        /// <summary>
+        /// List all remote refs
+        /// </summary>
+        ///
+        public IEnumerable<GitRef> GetRemoteRefs()
+        {
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote");
+
+            switch (r.ExitCode)
+            {
+                case 0:
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
+                default:
+                    throw new GitException("Get remote refs failed", r);
+            }
+        }
+
+
+        /// <summary>
+        /// List all local refs
+        /// </summary>
+        ///
+        public IEnumerable<GitRef> GetRefs()
+        {
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
+                "show-ref", "--head", "--dereference");
+
+            switch (r.ExitCode)
+            {
+                case 0:
+                case 1:
+                    return ParseRefLines(StringExtensions.SplitLines(r.StandardOutput));
+                default:
+                    throw new GitException("Get refs failed", r);
+            }
         }
 
 
