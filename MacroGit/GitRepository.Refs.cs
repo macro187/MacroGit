@@ -72,14 +72,25 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Create a branch
+        /// Create a branch at the current HEAD
         /// </summary>
         ///
         public void CreateBranch(GitRefNameComponent name)
         {
-            Guard.NotNull(name, nameof(name));
+            CreateBranch(name, new GitRev("HEAD"));
+        }
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch", name);
+
+        /// <summary>
+        /// Create a branch
+        /// </summary>
+        ///
+        public void CreateBranch(GitRefNameComponent name, GitRev target)
+        {
+            Guard.NotNull(name, nameof(name));
+            Guard.NotNull(target, nameof(target));
+
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch", name, target);
 
             if (r.ExitCode != 0)
             {
@@ -89,14 +100,26 @@ namespace MacroGit
 
 
         /// <summary>
-        /// Create or move a branch to the currently-checked-out commit
+        /// Create or move a branch to the current HEAD
         /// </summary>
         ///
         public void CreateOrMoveBranch(GitRefNameComponent name)
         {
-            Guard.NotNull(name, nameof(name));
+            CreateOrMoveBranch(name, new GitRev("HEAD"));
+        }
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch", "-f", name, "HEAD");
+
+        /// <summary>
+        /// Create or move a branch
+        /// </summary>
+        ///
+        public void CreateOrMoveBranch(GitRefNameComponent name, GitRev target)
+        {
+            Guard.NotNull(name, nameof(name));
+            Guard.NotNull(target, nameof(target));
+
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                "git", "-C", Path, "branch", "-f", name, target);
 
             if (r.ExitCode != 0)
                 throw new GitException("Create or move branch failed", r);
