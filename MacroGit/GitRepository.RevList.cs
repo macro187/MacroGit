@@ -56,9 +56,7 @@ namespace MacroGit
             {
                 return
                     ParseRevList(
-                        ProcessExtensions.ExecuteAndRead(
-                            null, false, true, null,
-                            "git", args.ToArray())
+                        ProcessExtensions.ExecuteAndRead(null, false, true, null, GitProgram, args.ToArray())
                         .GetEnumerator());
             }
 

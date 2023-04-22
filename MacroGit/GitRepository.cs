@@ -4,12 +4,16 @@ using System.IO;
 using System.Linq;
 using MacroDiagnostics;
 using MacroGuards;
+using MacroSystem;
 using IOPath = System.IO.Path;
 
 namespace MacroGit
 {
     public partial class GitRepository
     {
+
+        static string GitProgram { get; } = EnvironmentExtensions.FindProgramOnSystemPath("git") ?? "git";
+
 
         /// <summary>
         /// Determine whether a directory is a Git repository
@@ -68,7 +72,7 @@ namespace MacroGit
 
             var path = IOPath.Combine(parentPath, directoryName);
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", parentPath, "clone", url);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, GitProgram, "-C", parentPath, "clone", url);
             if (r.ExitCode != 0) throw new GitException("Cloning repository failed", r);
 
             return new GitRepository(path);
@@ -106,7 +110,7 @@ namespace MacroGit
             if (IsRepository(path))
                 throw new InvalidOperationException("Path is already a Git repository");
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", path, "init");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, GitProgram, "-C", path, "init");
             if (r.ExitCode != 0) throw new GitException("Initialising repository failed", r);
 
             return new GitRepository(path);
@@ -192,8 +196,8 @@ namespace MacroGit
         {
             Guard.NotNull(rev, nameof(rev));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "rev-parse", "-q", "--verify", $"{rev}^{{commit}}");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "rev-parse", "-q", "--verify", $"{rev}^{{commit}}");
 
             if (r.ExitCode != 0)
             {
@@ -227,8 +231,8 @@ namespace MacroGit
 
             var length = minimumLength == 0 ? "auto" : minimumLength.ToString();
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "rev-parse", $"--short={length}", rev);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "rev-parse", $"--short={length}", rev);
 
             if (r.ExitCode != 0)
             {
@@ -253,7 +257,8 @@ namespace MacroGit
         ///
         public bool HasUncommittedChanges()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "status", "--porcelain");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "status", "--porcelain");
 
             if (r.ExitCode != 0)
                 throw new GitException("Uncommitted changes check failed", r);
@@ -268,7 +273,8 @@ namespace MacroGit
         ///
         public void StageChanges()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "add", "-A");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "add", "-A");
 
             if (r.ExitCode != 0)
                 throw new GitException("Stage uncommitted changes failed", r);
@@ -283,7 +289,8 @@ namespace MacroGit
         {
             Guard.Required(message, nameof(message));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "commit", "-m", message);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "commit", "-m", message);
 
             if (r.ExitCode != 0)
                 throw new GitException("Commit failed", r);
@@ -311,7 +318,8 @@ namespace MacroGit
                 throw new InvalidOperationException("Repository contains uncommitted changes");
             }
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "checkout", rev);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "checkout", rev);
             if (r.ExitCode != 0)
             {
                 throw new GitException("Checkout failed", r);
@@ -360,7 +368,7 @@ namespace MacroGit
             args.Add(remote);
             args.AddRange(refs.Select(r => r.ToString()));
 
-            var result = ProcessExtensions.ExecuteCaptured(false, echoOutput, null, "git", args.ToArray());
+            var result = ProcessExtensions.ExecuteCaptured(false, echoOutput, null, GitProgram, args.ToArray());
 
             if (result.ExitCode != 0)
             {
@@ -380,7 +388,8 @@ namespace MacroGit
             Guard.NotNull(path, nameof(path));
             Guard.NotWhiteSpaceOnly(path, nameof(path));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "check-ignore", "-q", path);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "check-ignore", "-q", path);
 
             switch (r.ExitCode)
             {
@@ -404,7 +413,7 @@ namespace MacroGit
             Guard.NotNull(descendent, nameof(descendent));
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null,
-                "git", "-C", Path, "merge-base", "--is-ancestor", ancestor, descendent);
+                GitProgram, "-C", Path, "merge-base", "--is-ancestor", ancestor, descendent);
 
             switch (r.ExitCode)
             {

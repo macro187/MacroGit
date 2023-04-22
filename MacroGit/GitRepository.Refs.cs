@@ -22,7 +22,8 @@ namespace MacroGit
         ///
         public GitRefNameComponent GetBranch()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "rev-parse", "--abbrev-ref", "HEAD");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "rev-parse", "--abbrev-ref", "HEAD");
 
             if (r.ExitCode != 0)
                 throw new GitException("Get current branch failed", r);
@@ -40,7 +41,8 @@ namespace MacroGit
         ///
         public IEnumerable<GitRef> GetRemoteBranches()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote", "--heads");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "ls-remote", "--heads");
 
             switch (r.ExitCode)
             {
@@ -58,7 +60,8 @@ namespace MacroGit
         ///
         public IEnumerable<GitRef> GetBranches()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "show-ref", "--heads");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "show-ref", "--heads");
 
             switch (r.ExitCode)
             {
@@ -90,7 +93,8 @@ namespace MacroGit
             Guard.NotNull(name, nameof(name));
             Guard.NotNull(target, nameof(target));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch", name, target);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "branch", name, target);
 
             if (r.ExitCode != 0)
             {
@@ -119,7 +123,7 @@ namespace MacroGit
             Guard.NotNull(target, nameof(target));
 
             var r = ProcessExtensions.ExecuteCaptured(false, false, null,
-                "git", "-C", Path, "branch", "-f", name, target);
+                GitProgram, "-C", Path, "branch", "-f", name, target);
 
             if (r.ExitCode != 0)
                 throw new GitException("Create or move branch failed", r);
@@ -134,7 +138,8 @@ namespace MacroGit
         {
             Guard.NotNull(name, nameof(name));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "branch", "-D", name);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "branch", "-D", name);
 
             if (r.ExitCode != 0)
             {
@@ -149,7 +154,8 @@ namespace MacroGit
         ///
         public IEnumerable<GitRef> GetRemoteTags()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote", "--tags");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "ls-remote", "--tags");
 
             switch (r.ExitCode)
             {
@@ -167,8 +173,8 @@ namespace MacroGit
         ///
         public IEnumerable<GitRef> GetTags()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "show-ref", "--tags", "-d");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "show-ref", "--tags", "-d");
 
             switch (r.ExitCode)
             {
@@ -189,7 +195,8 @@ namespace MacroGit
         {
             Guard.NotNull(name, nameof(name));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "tag", name);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "tag", name);
 
             if (r.ExitCode != 0)
                 throw new GitException("Create tag failed", r);
@@ -204,7 +211,8 @@ namespace MacroGit
         {
             Guard.NotNull(name, nameof(name));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "tag", "-d", name);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "tag", "-d", name);
 
             if (r.ExitCode != 0)
                 throw new GitException("Delete tag failed", r);
@@ -227,7 +235,8 @@ namespace MacroGit
         {
             Guard.NotNull(name, nameof(name));
 
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "symbolic-ref", name);
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "symbolic-ref", name);
 
             if (r.ExitCode != 0)
             {
@@ -244,7 +253,8 @@ namespace MacroGit
         ///
         public IEnumerable<GitRef> GetRemoteRefs()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path, "ls-remote");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "ls-remote");
 
             switch (r.ExitCode)
             {
@@ -262,8 +272,8 @@ namespace MacroGit
         ///
         public IEnumerable<GitRef> GetRefs()
         {
-            var r = ProcessExtensions.ExecuteCaptured(false, false, null, "git", "-C", Path,
-                "show-ref", "--head", "--dereference");
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null,
+                GitProgram, "-C", Path, "show-ref", "--head", "--dereference");
 
             switch (r.ExitCode)
             {
