@@ -148,6 +148,48 @@ namespace MacroGit
 
 
         /// <summary>
+        /// Retrieve a Git configuration entry
+        /// </summary>
+        ///
+        public string Config(string name)
+        {
+            Guard.NotNull(name, nameof(name));
+            Guard.NotWhiteSpaceOnly(name, nameof(name));
+
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, GitProgram, "-C", Path,
+                "config", name);
+
+            if (r.ExitCode != 0)
+            {
+                throw new GitException("Get config entry failed", r);
+            }
+
+            return r.StandardOutput.Trim();
+        }
+
+
+        /// <summary>
+        /// Set a Git configuration entry at the repository scope
+        /// </summary>
+        ///
+        public void Config(string name, string value)
+        {
+            Guard.NotNull(name, nameof(name));
+            Guard.NotWhiteSpaceOnly(name, nameof(name));
+            Guard.NotNull(value, nameof(value));
+            Guard.NotWhiteSpaceOnly(value, nameof(value));
+
+            var r = ProcessExtensions.ExecuteCaptured(false, false, null, GitProgram, "-C", Path,
+                "config", name, value);
+
+            if (r.ExitCode != 0)
+            {
+                throw new GitException("Set config entry failed", r);
+            }
+        }
+
+
+        /// <summary>
         /// Determine whether a rev resolves to a commit in the repository
         /// </summary>
         ///
